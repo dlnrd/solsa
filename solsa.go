@@ -1,69 +1,106 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"github.com/unpackdev/solgo"
+	"github.com/unpackdev/solgo/ast"
 	"os"
-	// "path/filepath"
+	fp "path/filepath"
 )
 
-func sumOfSlice(slice []int) int {
-	total := 0
-	for _, value := range slice {
-		total += value
-	}
-	return total
-}
-
-// simple bin packing algo
-func ffBinPacking(slice []int) [][]int {
-	const binsize = 32
-	bins := [][]int{}
-	for _, value := range slice {
-		done := false
-		for index, binValue := range bins {
-			if sumOfSlice(binValue)+value > binsize {
-				continue
-			}
-			bins[index] = append(binValue, value)
-			done = true
-			break
-		}
-		if !done {
-			bins = append(bins, []int{value})
-		}
-	}
-	return bins
-}
+/*
+ TODO:
+ - parse .sol file
+ - create abstract syntax tree (ast)
+ - find size of the contracts variables
+ - use bin packing algorithm to sort into more efficiently packed slots
+ - rewrite bin packing algo to potentially find better solutions (less bins)
+ - output results
+ - write more optimisations :)
+*/
 
 func main() {
-	filePath := flag.String("f", "", "Path to File")
-	dirPath := flag.String("d", "", "Path to Directory")
+	filePath := flag.String("i", "", "Path to File/Directory")
 	outputPath := flag.String("o", "", "Path to save output")
 	flag.Parse()
 
-	if *filePath == "" && *dirPath == "" {
-		fmt.Println("Please enter a path to either a file (-f) or directory (-d)")
-		return
-	}
-	if *filePath != "" && *dirPath != "" {
-		fmt.Println("Please use either -f or -d not both")
+	var isFile bool
+
+	// CHECKS PATH ISNT EMPTY
+	if *filePath == "" {
+		fmt.Println("Enter a path to file or directory (-i)")
 		return // better than os.Exit(0) as runs deconstructors that close stuff
 	}
-	// if !filepath.IsLocal(*filePath) && !filepath.IsAbs(*filePath) {
-	// 	return // not sure this is best to verify input is filepath
-	// }
-	if i, err := os.Stat(*filePath); err == nil {
-		fmt.Println("File exists")
-		fmt.Println(i.IsDir())
 
+	// CHECK INPUT PATH VALIDITY
+	if fileInfo, err := os.Stat(*filePath); err == nil { // file exists
+		isFile = !fileInfo.IsDir()
+	} else {
+		fmt.Println("File doesn't exist, please enter a valid filepath")
+		return
+	}
+	if *outputPath == "" { // don't want output
+		// don't do anything :)
+	} else if fileInfo, err := os.Stat(*outputPath); err == nil { // file exists
+		if fileInfo.IsDir() {
+			fmt.Println("Output file is a directory, please enter a filepath to save")
+			return
+		}
+	} else { // file doesn't exist
+		data := []byte("data")
+		if err := os.WriteFile(*outputPath, data, 0644); err == nil {
+			os.Remove(*outputPath) // can write to outputfile
+		} else {
+			fmt.Println("Can't write to output file, do you have write permissions?")
+			return
+		}
 	}
 
-	fmt.Println("FilePath: ", *filePath, "\tDirPath: ", *dirPath, "\tOutputPath: ", *outputPath)
+	if isFile {
+		if fp.Ext(*filePath) != ".sol" {
+			fmt.Println("File is not a .sol file")
+			return
+		}
+		// cwd, _ := os.Getwd()
+		// dir := fp.Dir(*filePath)
+		// name := fp.Base(*filePath)
+		// fmt.Println(cwd, dir, name)
+		// fmt.Println(fp.Clean(*filePath))
+		// fmt.Println(fp.Join(cwd, name))
+	} else {
+		// get a list of all the files to be checked?
+	}
 
-	// fmt.Println(ffBinPacking([]int{16, 4, 2, 22, 8, 2, 32, 1, 6, 8, 4}))
+	// file, err := os.Open(*filePath)
+	// if err != nil {
+	// 	fmt.Println("Error opening file")
+	// 	return
+	// }
+	// defer file.Close()
+
+	// // boilerplate for solgo
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
+
+	cwd, _ := os.Getwd()
+	// ffp := fp.Join(cwd, fp.Base(*filePath))
+
+	solgo.SetLocalSourcesPath(cwd)
+	sources, err := solgo.NewSourcesFromPath("test", cwd)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	parser, err := solgo.NewParserFromSources(context.TODO(), sources)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	astBuilder := ast.NewAstBuilder(parser.GetParser(), parser.GetSources())
+	fmt.Println(astBuilder.GetRoot())
+
+	fmt.Println("FilePath: ", *filePath, "\tOutputPath: ", *outputPath)
 }
-
-/*
-
- */
