@@ -4,16 +4,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/unpackdev/solgo"
-	"github.com/unpackdev/solgo/ast"
 	"os"
 	fp "path/filepath"
+	"strings"
+
+	"github.com/unpackdev/solgo"
+	"github.com/unpackdev/solgo/ast"
+	"github.com/unpackdev/solgo/ir"
 )
 
 /*
  TODO:
- - parse .sol file
- - create abstract syntax tree (ast)
  - find size of the contracts variables
  - use bin packing algorithm to sort into more efficiently packed slots
  - rewrite bin packing algo to potentially find better solutions (less bins)
@@ -22,20 +23,22 @@ import (
 */
 
 func main() {
-	filePath := flag.String("i", "", "Path to File/Directory")
+	tmpFilePath := flag.String("i", "", "Path to File/Directory")
 	outputPath := flag.String("o", "", "Path to save output")
 	flag.Parse()
+
+	filePath, _ := fp.Abs(*tmpFilePath)
 
 	var isFile bool
 
 	// CHECKS PATH ISNT EMPTY
-	if *filePath == "" {
+	if filePath == "" {
 		fmt.Println("Enter a path to file or directory (-i)")
 		return // better than os.Exit(0) as runs deconstructors that close stuff
 	}
 
 	// CHECK INPUT PATH VALIDITY
-	if fileInfo, err := os.Stat(*filePath); err == nil { // file exists
+	if fileInfo, err := os.Stat(filePath); err == nil { // file exists
 		isFile = !fileInfo.IsDir()
 	} else {
 		fmt.Println("File doesn't exist, please enter a valid filepath")
@@ -59,48 +62,63 @@ func main() {
 	}
 
 	if isFile {
-		if fp.Ext(*filePath) != ".sol" {
+		if fp.Ext(filePath) != ".sol" {
 			fmt.Println("File is not a .sol file")
 			return
 		}
-		// cwd, _ := os.Getwd()
-		// dir := fp.Dir(*filePath)
-		// name := fp.Base(*filePath)
-		// fmt.Println(cwd, dir, name)
-		// fmt.Println(fp.Clean(*filePath))
-		// fmt.Println(fp.Join(cwd, name))
 	} else {
 		// get a list of all the files to be checked?
 	}
 
-	// file, err := os.Open(*filePath)
-	// if err != nil {
-	// 	fmt.Println("Error opening file")
-	// 	return
-	// }
-	// defer file.Close()
-
 	// // boilerplate for solgo
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
+	contractName := strings.TrimSuffix(fp.Base(filePath), ".sol")
+	sourcesPath := fp.Dir(filePath)
 
-	cwd, _ := os.Getwd()
-	// ffp := fp.Join(cwd, fp.Base(*filePath))
-
-	solgo.SetLocalSourcesPath(cwd)
-	sources, err := solgo.NewSourcesFromPath("test", cwd)
+	solgo.SetLocalSourcesPath(sourcesPath)
+	sources, err := solgo.NewSourcesFromPath(contractName, sourcesPath)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	parser, err := solgo.NewParserFromSources(context.TODO(), sources)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	builder, err := ir.NewBuilderFromSources(ctx, sources)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("builder init: ", err)
 		return
 	}
-	astBuilder := ast.NewAstBuilder(parser.GetParser(), parser.GetSources())
-	fmt.Println(astBuilder.GetRoot())
 
-	fmt.Println("FilePath: ", *filePath, "\tOutputPath: ", *outputPath)
+	if err := builder.Parse(); err != nil {
+		fmt.Println("builder parse: ", err)
+	}
+
+	if err := builder.Build(); err != nil {
+		fmt.Println("builder build: ", err)
+	}
+
+	ast := builder.GetAstBuilder()
+	if err := ast.ResolveReferences(); err != nil {
+		fmt.Println("AST Resolve References: ", err)
+	}
+
+	contracts := builder.GetRoot().GetContracts()
+	// fmt.Println("Contracts: ", contracts)
+	for _, contract := range contracts {
+		structs := contract.GetStructs()
+		for _, s := range structs {
+			members := s.GetAST().GetMembers()
+			getVariables(members)
+		}
+	}
+
+}
+
+func getVariables(members []*ast.Parameter) {
+	for _, param := range members {
+		name := param.GetName()
+		vartype := param.GetTypeName().GetName()
+		fmt.Println(name, vartype)
+	}
 }
