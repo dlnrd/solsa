@@ -17,7 +17,6 @@ const maxSlotSize = 256 // in bits
 
 /*
  TODO:
- - find size of the contracts variables
  - use bin packing algorithm to sort into more efficiently packed slots
  - rewrite bin packing algo to potentially find better solutions (less bins)
  - output results
@@ -103,14 +102,6 @@ func main() {
 	if err := ast.ResolveReferences(); err != nil {
 		fmt.Println("AST Resolve References: ", err)
 	}
-
-	/*
-		 TODO: state vaiable sorting
-			- identify?
-			- calculate slots used
-			- calculate potential slots used
-				- sum of sv sizes / slot size
-	*/
 
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
