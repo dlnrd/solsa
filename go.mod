@@ -1,4 +1,4 @@
-module dlnrd/solsa
+module solsa
 
 go 1.23.4
 

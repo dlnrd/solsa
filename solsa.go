@@ -4,16 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"math"
 	"os"
 	fp "path/filepath"
 	"strings"
 
 	"github.com/unpackdev/solgo"
 	"github.com/unpackdev/solgo/ir"
-)
 
-const maxSlotSize = 256 // in bits
+	"solsa/optimisations"
+)
 
 /*
  TODO:
@@ -106,55 +105,14 @@ func main() {
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
 		fmt.Println("Contract: ", contract.GetName())
-		fmt.Println("StateVariableOptimisable: ", StateVariableOptimisable(contract))
+		fmt.Println("StateVariableOptimisable: ", optimisations.StateVariableOptimisable(contract))
+		fmt.Println("StructVariableOptimisable: ", optimisations.StructVariableOptimisable(contract))
 	}
 }
 
-func StateVariableOptimisable(contract *ir.Contract) bool {
-	stateVariables := contract.GetStateVariables()
-
-	if len(stateVariables) == 0 {
-		return false
-	}
-
-	totalBits := getTotalStorageBits(stateVariables)
-	potentialSlots := math.Ceil(float64(totalBits) / maxSlotSize)
-	currentSlots := getSlotsUsed(stateVariables)
-
-	if potentialSlots < float64(currentSlots) {
-		return true
-	}
-	return false
-}
-
-func getTotalStorageBits(stateVariables []*ir.StateVariable) int64 {
-	var sum int64 = 0
-	for _, v := range stateVariables {
-		storageSize, _ := v.GetStorageSize()
-		sum += storageSize
-	}
-	return sum
-}
-
-func getSlotsUsed(stateVariables []*ir.StateVariable) int64 {
-	var slotsUsed, bitsUsed int64
-	for _, v := range stateVariables {
-		size, _ := v.GetStorageSize()
-		if size+bitsUsed > maxSlotSize {
-			slotsUsed++
-			bitsUsed = size
-		} else {
-			bitsUsed += size
-		}
-	}
-	return slotsUsed + 1
-}
-
-func listAllStateVariables(stateVariables []*ir.StateVariable) {
-	for _, v := range stateVariables {
-		name := v.GetName()
-		vartype := v.GetType()
-		storageSize, exact := v.GetStorageSize()
-		fmt.Println(name, vartype, storageSize, exact)
-	}
-}
+// var declarations struct {
+// 	Name string
+// 	VarType string
+// 	Size int64
+// 	Exact bool
+// }
