@@ -16,9 +16,7 @@ import (
 
 /*
  TODO:
- - use bin packing algorithm to sort into more efficiently packed slots
- - rewrite bin packing algo to potentially find better solutions (less bins)
- - output results
+ - output results better
  - write more optimisations :)
 */
 
@@ -117,15 +115,24 @@ func main() {
 
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
-		fmt.Println("Contract: ", contract.GetName())
-		fmt.Println("StateVariableOptimisable: ", opt.StateVariableOptimisable(contract))
-		fmt.Println("StructVariableOptimisable: ", opt.StructVariableOptimisable(contract))
+		fmt.Println("\nContract: ", contract.GetName())
+		stateVarOpt := opt.StateVariableOptimisable(contract)
+		structVarOpt := opt.StructVariableOptimisable(contract)
+		fmt.Println("StateVariableOptimisable: ", stateVarOpt)
+		if stateVarOpt {
+			fmt.Println("----- old order -----")
+			opt.PrintStateVariables(contract.StateVariables)
+			opt.OptimiseStateVariables(contract)
+			fmt.Println("----- new order -----")
+			opt.PrintStateVariables(contract.StateVariables)
+		}
+		fmt.Println("StructVariableOptimisable: ", structVarOpt)
+		if structVarOpt {
+			fmt.Println("----- old order -----")
+			opt.PrintStructVariables(contract)
+			opt.OptimiseStructVariables(contract)
+			fmt.Println("----- new order -----")
+			opt.PrintStructVariables(contract)
+		}
 	}
 }
-
-// var declarations struct {
-// 	Name string
-// 	VarType string
-// 	Size int64
-// 	Exact bool
-// }

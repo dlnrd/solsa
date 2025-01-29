@@ -7,7 +7,31 @@ import (
 	"math"
 )
 
-const maxSlotSize = 256 // in bits
+func OptimiseStructVariables(contract *ir.Contract) bool {
+	structs := contract.GetStructs()
+	if len(structs) == 0 {
+		return false
+	}
+
+	for _, s := range structs {
+		structVariables := s.GetAST().GetMembers()
+		variables := []Variable{}
+		for index, v := range structVariables {
+			size, _ := v.GetTypeName().StorageSize()
+			variables = append(variables, Variable{index, size})
+		}
+		tmp := VariablePacking(variables)
+		newStructVariables := []ast.Node[ast.NodeType]{}
+		for _, bin := range tmp {
+			for _, v := range bin {
+				newStructVariables = append(newStructVariables, structVariables[v.Index])
+			}
+		}
+		s.GetAST().Members = newStructVariables
+	}
+
+	return true
+}
 
 func StructVariableOptimisable(contract *ir.Contract) bool {
 	structs := contract.GetStructs()
@@ -17,7 +41,6 @@ func StructVariableOptimisable(contract *ir.Contract) bool {
 
 	for _, s := range structs {
 		structVariables := s.GetAST().GetMembers()
-		getTotalStorageBitsStruct(structVariables)
 		totalBits := getTotalStorageBitsStruct(structVariables)
 		potentialSlots := math.Ceil(float64(totalBits) / maxSlotSize)
 		currentSlots := getSlotsUsedStruct(structVariables)

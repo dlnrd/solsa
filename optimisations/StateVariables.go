@@ -7,6 +7,31 @@ import (
 	"github.com/unpackdev/solgo/ir"
 )
 
+func OptimiseStateVariables(contract *ir.Contract) bool {
+	stateVariables := contract.GetStateVariables()
+	if len(stateVariables) == 0 {
+		return false
+	}
+
+	variables := []Variable{}
+	// get index and size of variable
+	for index, v := range stateVariables {
+		size, _ := v.GetStorageSize()
+		variables = append(variables, Variable{index, size})
+	}
+	tmp := VariablePacking(variables)
+	// convert 2d array into *[]ir.StateVariable
+	newStateVariables := []*ir.StateVariable{}
+	for _, bin := range tmp {
+		for _, v := range bin {
+			newStateVariables = append(newStateVariables, stateVariables[v.Index])
+		}
+	}
+	// update ast with new variables
+	contract.StateVariables = newStateVariables
+	return true
+}
+
 func StateVariableOptimisable(contract *ir.Contract) bool {
 	stateVariables := contract.GetStateVariables()
 
