@@ -11,7 +11,7 @@ import (
 	"github.com/unpackdev/solgo"
 	"github.com/unpackdev/solgo/ir"
 
-	"solsa/optimisations"
+	opt "solsa/optimisations"
 )
 
 /*
@@ -61,23 +61,36 @@ func main() {
 		}
 	}
 
+	var sources *solgo.Sources
 	if isFile {
 		if fp.Ext(filePath) != ".sol" {
 			fmt.Println("File is not a .sol file")
 			return
 		}
+
+		contractName := strings.TrimSuffix(fp.Base(filePath), ".sol")
+		content, err := os.ReadFile(fp.Clean(filePath))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		sources = &solgo.Sources{
+			SourceUnits: []*solgo.SourceUnit{
+				{
+					Name:    contractName,
+					Path:    filePath,
+					Content: string(content),
+				},
+			},
+		}
 	} else {
-		// get a list of all the files to be checked?
-	}
-
-	contractName := strings.TrimSuffix(fp.Base(filePath), ".sol")
-	sourcesPath := fp.Dir(filePath)
-
-	solgo.SetLocalSourcesPath(sourcesPath)
-	sources, err := solgo.NewSourcesFromPath(contractName, sourcesPath)
-	if err != nil {
-		fmt.Println(err)
-		return
+		var err error
+		solgo.SetLocalSourcesPath(filePath)
+		sources, err = solgo.NewSourcesFromPath("", filePath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -105,8 +118,8 @@ func main() {
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
 		fmt.Println("Contract: ", contract.GetName())
-		fmt.Println("StateVariableOptimisable: ", optimisations.StateVariableOptimisable(contract))
-		fmt.Println("StructVariableOptimisable: ", optimisations.StructVariableOptimisable(contract))
+		fmt.Println("StateVariableOptimisable: ", opt.StateVariableOptimisable(contract))
+		fmt.Println("StructVariableOptimisable: ", opt.StructVariableOptimisable(contract))
 	}
 }
 
