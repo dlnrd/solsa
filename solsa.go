@@ -8,17 +8,12 @@ import (
 	fp "path/filepath"
 	"strings"
 
+	"github.com/dlnrd/solgo/printer/ast_printer"
 	"github.com/unpackdev/solgo"
 	"github.com/unpackdev/solgo/ir"
 
 	opt "solsa/optimisations"
 )
-
-/*
- TODO:
- - output results better
- - write more optimisations :)
-*/
 
 func main() {
 	tmpFilePath := flag.String("i", "", "Path to File/Directory")
@@ -102,37 +97,57 @@ func main() {
 
 	if err := builder.Parse(); err != nil {
 		fmt.Println("builder parse: ", err)
+		return
 	}
 
 	if err := builder.Build(); err != nil {
 		fmt.Println("builder build: ", err)
+		return
 	}
 
 	ast := builder.GetAstBuilder()
 	if err := ast.ResolveReferences(); err != nil {
 		fmt.Println("AST Resolve References: ", err)
+		return
 	}
 
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
 		fmt.Println("\nContract: ", contract.GetName())
+
 		stateVarOpt := opt.StateVariableOptimisable(contract)
 		structVarOpt := opt.StructVariableOptimisable(contract)
+		calldataOpt := opt.CalldataOptimisable(contract)
+
+		fmt.Println("------------------ OPTIMISATIONS -------------------")
 		fmt.Println("StateVariableOptimisable: ", stateVarOpt)
-		if stateVarOpt {
-			fmt.Println("----- old order -----")
-			opt.PrintStateVariables(contract.StateVariables)
-			opt.OptimiseStateVariables(contract)
-			fmt.Println("----- new order -----")
-			opt.PrintStateVariables(contract.StateVariables)
-		}
 		fmt.Println("StructVariableOptimisable: ", structVarOpt)
-		if structVarOpt {
-			fmt.Println("----- old order -----")
-			opt.PrintStructVariables(contract)
-			opt.OptimiseStructVariables(contract)
-			fmt.Println("----- new order -----")
-			opt.PrintStructVariables(contract)
+		fmt.Println("CalldataOptimisable: ", calldataOpt)
+
+		if stateVarOpt == false && structVarOpt == false && calldataOpt == false { // kinda ugly, maybe fix?
+			fmt.Println("-------------- NO OPTIMISATIONS FOUND --------------")
+			continue
 		}
+
+		unoptContract, _ := ast_printer.Print(contract.GetAST().GetContract())
+		fmt.Println("--------------- UNOPTIMISED CONTRACT ---------------")
+		fmt.Print(unoptContract)
+
+		if stateVarOpt {
+			// opt.PrintStateVariables(contract.StateVariables)
+			opt.OptimiseStateVariables(contract)
+			// opt.PrintStateVariables(contract.StateVariables)
+		}
+		if structVarOpt {
+			opt.OptimiseStructVariables(contract)
+		}
+		if calldataOpt {
+			opt.OptimiseCalldata(contract)
+
+		}
+
+		optContract, _ := ast_printer.Print(contract.GetAST().GetContract())
+		fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
+		fmt.Print(optContract)
 	}
 }

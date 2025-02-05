@@ -2,7 +2,11 @@ module solsa
 
 go 1.23.4
 
-require github.com/unpackdev/solgo v0.3.7
+require (
+	github.com/dlnrd/solgo v0.0.0-20250202041040-1022d12a2364
+	github.com/unpackdev/protos v0.3.5
+	github.com/unpackdev/solgo v0.3.7
+)
 
 require (
 	cel.dev/expr v0.19.1 // indirect
@@ -26,7 +30,6 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/unpackdev/protos v0.3.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
