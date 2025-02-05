@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/unpackdev/solgo/ast"
 	"github.com/unpackdev/solgo/ir"
 )
 
@@ -27,9 +28,43 @@ func OptimiseStateVariables(contract *ir.Contract) bool {
 			newStateVariables = append(newStateVariables, stateVariables[v.Index])
 		}
 	}
+
+	tree := newStateVariables[0].GetAST().GetTree()
+	parent_node := tree.GetById(newStateVariables[0].GetSrc().GetParentIndex())
+	parent_nodes := parent_node.GetNodes()
+
+	cp := make([]ast.Node[ast.NodeType], len(parent_nodes))
+	copy(cp, parent_nodes)
+
+	m := make(map[int64]int)
+
+	for desindex, nsv := range newStateVariables {
+		child_id := nsv.GetAST().GetId()
+		m[child_id] = desindex
+	}
+
+	for index, child := range cp {
+		destIndex, exist := m[child.GetId()]
+		if !exist {
+			continue
+		}
+		parent_nodes[destIndex] = cp[index]
+
+	}
 	// update ast with new variables
 	contract.StateVariables = newStateVariables
 	return true
+}
+
+func printAllNodes(node ast.Node[ast.NodeType]) {
+	nodes := node.GetNodes()
+	if nodes != nil {
+		for i, node := range nodes {
+			fmt.Println(i)
+			printAllNodes(node)
+		}
+	}
+	fmt.Println(node)
 }
 
 func StateVariableOptimisable(contract *ir.Contract) bool {

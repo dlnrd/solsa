@@ -134,9 +134,7 @@ func main() {
 		fmt.Print(unoptContract)
 
 		if stateVarOpt {
-			// opt.PrintStateVariables(contract.StateVariables)
 			opt.OptimiseStateVariables(contract)
-			// opt.PrintStateVariables(contract.StateVariables)
 		}
 		if structVarOpt {
 			opt.OptimiseStructVariables(contract)
