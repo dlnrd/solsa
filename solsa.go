@@ -15,7 +15,7 @@ import (
 	opt "solsa/optimisations"
 )
 
-func main() {
+func getSources() (sources *solgo.Sources, ok bool) {
 	tmpFilePath := flag.String("i", "", "Path to File/Directory")
 	outputPath := flag.String("o", "", "Path to save output")
 	flag.Parse()
@@ -27,7 +27,7 @@ func main() {
 	// CHECKS PATH ISNT EMPTY
 	if filePath == "" {
 		fmt.Println("Enter a path to file or directory (-i)")
-		return // better than os.Exit(0) as runs deconstructors that close stuff
+		return nil, false // better than os.Exit(0) as runs deconstructors that close stuff
 	}
 
 	// CHECK INPUT PATH VALIDITY
@@ -35,14 +35,14 @@ func main() {
 		isFile = !fileInfo.IsDir()
 	} else {
 		fmt.Println("File doesn't exist, please enter a valid filepath")
-		return
+		return nil, false
 	}
 	if *outputPath == "" { // don't want output
 		// don't do anything :)
 	} else if fileInfo, err := os.Stat(*outputPath); err == nil { // file exists
 		if fileInfo.IsDir() {
 			fmt.Println("Output file is a directory, please enter a filepath to save")
-			return
+			return nil, false
 		}
 	} else { // file doesn't exist
 		data := []byte("data")
@@ -50,22 +50,21 @@ func main() {
 			os.Remove(*outputPath) // can write to outputfile
 		} else {
 			fmt.Println("Can't write to output file, do you have write permissions?")
-			return
+			return nil, false
 		}
 	}
 
-	var sources *solgo.Sources
 	if isFile {
 		if fp.Ext(filePath) != ".sol" {
 			fmt.Println("File is not a .sol file")
-			return
+			return nil, false
 		}
 
 		contractName := strings.TrimSuffix(fp.Base(filePath), ".sol")
 		content, err := os.ReadFile(fp.Clean(filePath))
 		if err != nil {
 			fmt.Println(err)
-			return
+			return nil, false
 		}
 		sources = &solgo.Sources{
 			SourceUnits: []*solgo.SourceUnit{
@@ -82,35 +81,43 @@ func main() {
 		sources, err = solgo.NewSourcesFromPath("", filePath)
 		if err != nil {
 			fmt.Println(err)
-			return
+			return nil, false
 		}
 	}
 
+	return sources, true
+}
+
+func setupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	builder, err := ir.NewBuilderFromSources(ctx, sources)
 	if err != nil {
 		fmt.Println("builder init: ", err)
-		return
+		return nil, false
 	}
 
 	if err := builder.Parse(); err != nil {
 		fmt.Println("builder parse: ", err)
-		return
+		return nil, false
 	}
 
 	if err := builder.Build(); err != nil {
 		fmt.Println("builder build: ", err)
-		return
+		return nil, false
 	}
 
 	ast := builder.GetAstBuilder()
 	if err := ast.ResolveReferences(); err != nil {
 		fmt.Println("AST Resolve References: ", err)
-		return
+		return nil, false
 	}
 
+	return builder, true
+}
+
+func optimiseContracts(builder *ir.Builder) {
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
 		fmt.Println("\nContract: ", contract.GetName())
@@ -148,4 +155,19 @@ func main() {
 		fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
 		fmt.Print(optContract)
 	}
+}
+
+func main() {
+	sources, ok := getSources()
+	if !ok {
+		return
+	}
+
+	builder, ok := setupSolgoBuilder(sources)
+	if !ok {
+		return
+	}
+
+	optimiseContracts(builder)
+
 }
