@@ -9,7 +9,7 @@ import (
 
 func OptimiseStructVariables(contract *ir.Contract) bool {
 	structs := contract.GetStructs()
-	if len(structs) == 0 {
+	if !StructVariableOptimisable(contract) {
 		return false
 	}
 

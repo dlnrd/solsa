@@ -8,8 +8,11 @@ import (
 	"github.com/unpackdev/solgo/ir"
 )
 
-func OptimiseCalldata(contract *ir.Contract) {
+func OptimiseCalldata(contract *ir.Contract) bool {
 	functions := contract.GetFunctions()
+	if !CalldataOptimisable(contract) {
+		return false
+	}
 
 	for _, function := range functions {
 		if function.GetVisibility() != ast_pb.Visibility_EXTERNAL {
@@ -37,8 +40,9 @@ func OptimiseCalldata(contract *ir.Contract) {
 				p.StorageLocation = ast_pb.StorageLocation_CALLDATA
 			}
 		}
-
 	}
+
+	return true
 }
 
 func CalldataOptimisable(contract *ir.Contract) bool {

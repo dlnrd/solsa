@@ -36,24 +36,3 @@ func VariablePacking(variables []Variable) [][]Variable {
 	}
 	return bins
 }
-
-// simple bin packing algo
-// func ffBinPacking(slice []int) [][]int {
-// 	const binsize = 32
-// 	bins := [][]int{}
-// 	for _, value := range slice {
-// 		done := false
-// 		for index, binValue := range bins {
-// 			if sumOfSlice(binValue)+value > binsize {
-// 				continue
-// 			}
-// 			bins[index] = append(binValue, value)
-// 			done = true
-// 			break
-// 		}
-// 		if !done {
-// 			bins = append(bins, []int{value})
-// 		}
-// 	}
-// 	return bins
-// }

@@ -10,7 +10,7 @@ import (
 
 func OptimiseStateVariables(contract *ir.Contract) bool {
 	stateVariables := contract.GetStateVariables()
-	if len(stateVariables) == 0 {
+	if !StateVariableOptimisable(contract) {
 		return false
 	}
 
@@ -20,51 +20,42 @@ func OptimiseStateVariables(contract *ir.Contract) bool {
 		size, _ := v.GetStorageSize()
 		variables = append(variables, Variable{index, size})
 	}
-	tmp := VariablePacking(variables)
+	packedVariables := VariablePacking(variables)
+
 	// convert 2d array into *[]ir.StateVariable
 	newStateVariables := []*ir.StateVariable{}
-	for _, bin := range tmp {
+	for _, bin := range packedVariables {
 		for _, v := range bin {
 			newStateVariables = append(newStateVariables, stateVariables[v.Index])
 		}
 	}
 
-	tree := newStateVariables[0].GetAST().GetTree()
-	parent_node := tree.GetById(newStateVariables[0].GetSrc().GetParentIndex())
-	parent_nodes := parent_node.GetNodes()
+	// get parent nodes (ik it's a mess)
+	parentNodes := newStateVariables[0].GetAST().GetTree().GetById(newStateVariables[0].GetSrc().GetParentIndex()).GetNodes()
 
-	cp := make([]ast.Node[ast.NodeType], len(parent_nodes))
-	copy(cp, parent_nodes)
+	tmpNodes := make([]ast.Node[ast.NodeType], len(parentNodes))
+	copy(tmpNodes, parentNodes)
 
 	m := make(map[int64]int)
 
-	for desindex, nsv := range newStateVariables {
-		child_id := nsv.GetAST().GetId()
-		m[child_id] = desindex
+	// init map for sorting
+	for destinationIndex, newStateVariable := range newStateVariables {
+		childId := newStateVariable.GetAST().GetId()
+		m[childId] = destinationIndex
 	}
 
-	for index, child := range cp {
+	// rearrange state variable nodes in AST
+	for index, child := range tmpNodes {
 		destIndex, exist := m[child.GetId()]
 		if !exist {
 			continue
 		}
-		parent_nodes[destIndex] = cp[index]
+		parentNodes[destIndex] = tmpNodes[index]
 
 	}
-	// update ast with new variables
+	// update ir with new variables
 	contract.StateVariables = newStateVariables
 	return true
-}
-
-func printAllNodes(node ast.Node[ast.NodeType]) {
-	nodes := node.GetNodes()
-	if nodes != nil {
-		for i, node := range nodes {
-			fmt.Println(i)
-			printAllNodes(node)
-		}
-	}
-	fmt.Println(node)
 }
 
 func StateVariableOptimisable(contract *ir.Contract) bool {
@@ -115,3 +106,14 @@ func PrintStateVariables(stateVariables []*ir.StateVariable) {
 		fmt.Println(name, vartype, storageSize, exact)
 	}
 }
+
+// func printAllNodes(node ast.Node[ast.NodeType]) {
+// 	nodes := node.GetNodes()
+// 	if nodes != nil {
+// 		for i, node := range nodes {
+// 			fmt.Println(i)
+// 			printAllNodes(node)
+// 		}
+// 	}
+// 	fmt.Println(node)
+// }
