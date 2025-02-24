@@ -15,46 +15,58 @@ import (
 	opt "solsa/optimisations"
 )
 
-func getSources() (sources *solgo.Sources, ok bool) {
+func ParseFlags() (filePath, outputPath string, ok bool) {
 	tmpFilePath := flag.String("i", "", "Path to File/Directory")
-	outputPath := flag.String("o", "", "Path to save output")
+	tmpOutputPath := flag.String("o", "", "Path to save output")
 	flag.Parse()
 
-	filePath, _ := fp.Abs(*tmpFilePath)
-
-	var isFile bool
-
-	// CHECKS PATH ISNT EMPTY
-	if filePath == "" {
+	if *tmpFilePath == "" {
 		fmt.Println("Enter a path to file or directory (-i)")
-		return nil, false // better than os.Exit(0) as runs deconstructors that close stuff
+		return "", "", false // better than os.Exit(0) as runs deconstructors that close stuff
+	} else {
+		filePath, _ = fp.Abs(*tmpFilePath)
+	}
+	if *tmpOutputPath == "" {
+		outputPath = ""
+	} else {
+		outputPath, _ = fp.Abs(*tmpOutputPath)
 	}
 
-	// CHECK INPUT PATH VALIDITY
-	if fileInfo, err := os.Stat(filePath); err == nil { // file exists
-		isFile = !fileInfo.IsDir()
-	} else {
-		fmt.Println("File doesn't exist, please enter a valid filepath")
-		return nil, false
-	}
-	if *outputPath == "" { // don't want output
+	if outputPath == "" { // don't want output
 		// don't do anything :)
-	} else if fileInfo, err := os.Stat(*outputPath); err == nil { // file exists
+	} else if fileInfo, err := os.Stat(outputPath); err == nil { // file exists
 		if fileInfo.IsDir() {
 			fmt.Println("Output file is a directory, please enter a filepath to save")
-			return nil, false
+			return "", "", false
 		}
 	} else { // file doesn't exist
 		data := []byte("data")
-		if err := os.WriteFile(*outputPath, data, 0644); err == nil {
-			os.Remove(*outputPath) // can write to outputfile
+		if err := os.WriteFile(outputPath, data, 0644); err == nil {
+			os.Remove(outputPath) // can write to outputfile
 		} else {
 			fmt.Println("Can't write to output file, do you have write permissions?")
-			return nil, false
+			return "", "", false
 		}
 	}
 
-	if isFile {
+	return filePath, outputPath, true
+}
+
+func GetSources(filePath string) (sources *solgo.Sources, ok bool) {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Println("File doesn't exist, please enter a valid filepath")
+		return nil, false
+	}
+
+	if fileInfo.IsDir() {
+		solgo.SetLocalSourcesPath(filePath)
+		sources, err = solgo.NewSourcesFromPath("", filePath)
+		if err != nil {
+			fmt.Println(err)
+			return nil, false
+		}
+	} else {
 		if fp.Ext(filePath) != ".sol" {
 			fmt.Println("File is not a .sol file")
 			return nil, false
@@ -75,20 +87,12 @@ func getSources() (sources *solgo.Sources, ok bool) {
 				},
 			},
 		}
-	} else {
-		var err error
-		solgo.SetLocalSourcesPath(filePath)
-		sources, err = solgo.NewSourcesFromPath("", filePath)
-		if err != nil {
-			fmt.Println(err)
-			return nil, false
-		}
 	}
 
 	return sources, true
 }
 
-func setupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
+func SetupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -117,7 +121,7 @@ func setupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
 	return builder, true
 }
 
-func optimiseContracts(builder *ir.Builder) {
+func OptimiseContracts(builder *ir.Builder) {
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
 		fmt.Println("\nContract: ", contract.GetName())
@@ -158,16 +162,21 @@ func optimiseContracts(builder *ir.Builder) {
 }
 
 func main() {
-	sources, ok := getSources()
+	filePath, _, ok := ParseFlags()
 	if !ok {
 		return
 	}
 
-	builder, ok := setupSolgoBuilder(sources)
+	sources, ok := GetSources(filePath)
 	if !ok {
 		return
 	}
 
-	optimiseContracts(builder)
+	builder, ok := SetupSolgoBuilder(sources)
+	if !ok {
+		return
+	}
+
+	OptimiseContracts(builder)
 
 }
