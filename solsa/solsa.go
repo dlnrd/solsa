@@ -1,4 +1,4 @@
-package main
+package solsa
 
 import (
 	"context"
@@ -159,24 +159,4 @@ func OptimiseContracts(builder *ir.Builder) {
 		fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
 		fmt.Print(optContract)
 	}
-}
-
-func main() {
-	filePath, _, ok := ParseFlags()
-	if !ok {
-		return
-	}
-
-	sources, ok := GetSources(filePath)
-	if !ok {
-		return
-	}
-
-	builder, ok := SetupSolgoBuilder(sources)
-	if !ok {
-		return
-	}
-
-	OptimiseContracts(builder)
-
 }
