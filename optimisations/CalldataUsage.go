@@ -84,7 +84,7 @@ func parameterGetsModified(param *ast.Parameter, function *ir.Function) bool {
 		nodeName := strings.Split(node.Text, "=")[0]
 
 		if strings.Contains(nodeName, "[") {
-			nodeName = nodeName[:strings.Index(nodeName, "[")]
+			nodeName = nodeName[:strings.Index(nodeName, "[")] // remove index details from slices
 		}
 
 		if nodeName == param.Name {
