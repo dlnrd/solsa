@@ -10,19 +10,26 @@ import (
 
 	"github.com/dlnrd/solgo/printer/ast_printer"
 	"github.com/unpackdev/solgo"
+	"github.com/unpackdev/solgo/ast"
 	"github.com/unpackdev/solgo/ir"
 
 	opt "solsa/optimisations"
 )
 
-func ParseFlags() (filePath, outputPath string, ok bool) {
+func ParseFlags() (filePath, outputPath string, silent, ok bool) {
 	tmpFilePath := flag.String("i", "", "Path to File/Directory")
-	tmpOutputPath := flag.String("o", "", "Path to save output")
+	tmpOutputPath := flag.String("o", "", "Path to output directory")
+	flag.BoolVar(&silent, "s", false, "Silent mode, no output to stdout")
 	flag.Parse()
+	// if *tmpSilent != "" {
+	// 	silent = true
+	// } else {
+	// 	silent = false
+	// }
 
 	if *tmpFilePath == "" {
 		fmt.Println("Enter a path to file or directory (-i)")
-		return "", "", false // better than os.Exit(0) as runs deconstructors that close stuff
+		return "", "", false, false // better than os.Exit(0) as runs deconstructors that close stuff
 	} else {
 		filePath, _ = fp.Abs(*tmpFilePath)
 	}
@@ -35,9 +42,9 @@ func ParseFlags() (filePath, outputPath string, ok bool) {
 	if outputPath == "" { // don't want output
 		// don't do anything :)
 	} else if fileInfo, err := os.Stat(outputPath); err == nil { // file exists
-		if fileInfo.IsDir() {
+		if !fileInfo.IsDir() {
 			fmt.Println("Output file is a directory, please enter a filepath to save")
-			return "", "", false
+			return "", "", false, false
 		}
 	} else { // file doesn't exist
 		data := []byte("data")
@@ -45,11 +52,11 @@ func ParseFlags() (filePath, outputPath string, ok bool) {
 			os.Remove(outputPath) // can write to outputfile
 		} else {
 			fmt.Println("Can't write to output file, do you have write permissions?")
-			return "", "", false
+			return "", "", false, false
 		}
 	}
 
-	return filePath, outputPath, true
+	return filePath, outputPath, silent, true
 }
 
 func GetSources(filePath string) (sources *solgo.Sources, ok bool) {
@@ -121,28 +128,33 @@ func SetupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
 	return builder, true
 }
 
-func OptimiseContracts(builder *ir.Builder) {
+func OptimiseContracts(builder *ir.Builder, silent bool) {
 	contracts := builder.GetRoot().GetContracts()
 	for _, contract := range contracts {
-		fmt.Println("\nContract: ", contract.GetName())
 
 		stateVarOpt := opt.StateVariableOptimisable(contract)
 		structVarOpt := opt.StructVariableOptimisable(contract)
 		calldataOpt := opt.CalldataOptimisable(contract)
 
-		fmt.Println("------------------ OPTIMISATIONS -------------------")
-		fmt.Println("StateVariableOptimisable: ", stateVarOpt)
-		fmt.Println("StructVariableOptimisable: ", structVarOpt)
-		fmt.Println("CalldataOptimisable: ", calldataOpt)
+		if !silent {
+			fmt.Println("\nContract: ", contract.GetName())
+			fmt.Println("------------------ OPTIMISATIONS -------------------")
+			fmt.Println("StateVariableOptimisable: ", stateVarOpt)
+			fmt.Println("StructVariableOptimisable: ", structVarOpt)
+			fmt.Println("CalldataOptimisable: ", calldataOpt)
+		}
 
 		if stateVarOpt == false && structVarOpt == false && calldataOpt == false { // kinda ugly, maybe fix?
-			fmt.Println("-------------- NO OPTIMISATIONS FOUND --------------")
+			if !silent {
+				fmt.Println("-------------- NO OPTIMISATIONS FOUND --------------")
+			}
 			continue
 		}
 
-		unoptContract, _ := ast_printer.Print(contract.GetAST().GetContract())
-		fmt.Println("--------------- UNOPTIMISED CONTRACT ---------------")
-		fmt.Print(unoptContract)
+		unoptContract, ok := ast_printer.Print(contract.GetAST().GetContract())
+		if !ok { // debug
+			printAllNodes(contract)
+		}
 
 		if stateVarOpt {
 			opt.OptimiseStateVariables(contract)
@@ -156,7 +168,58 @@ func OptimiseContracts(builder *ir.Builder) {
 		}
 
 		optContract, _ := ast_printer.Print(contract.GetAST().GetContract())
-		fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
-		fmt.Print(optContract)
+
+		if !silent {
+			fmt.Println("--------------- UNOPTIMISED CONTRACT ---------------")
+			fmt.Print(unoptContract)
+			fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
+			fmt.Print(optContract)
+		}
+		// fmt.Println(ContractBuilder(contract))
+		// builder.Build()
+		// builder.GetSources().WriteToDir("/home/dlnrd/uni/fyp/testsol/tmp")
+
+	}
+
+}
+
+func printAllNodes(contract *ir.Contract) {
+	contractNodes := contract.GetAST().GetNodes()
+	for _, node := range contractNodes {
+		fmt.Println(node)
+		if node.GetNodes() != nil {
+			printAllNodesRecursive(node)
+		}
 	}
 }
+
+func printAllNodesRecursive(node ast.Node[ast.NodeType]) {
+	fmt.Println(node)
+	if node.GetNodes() != nil {
+		printAllNodesRecursive(node)
+	}
+}
+
+func ContractBuilder(contract *ir.Contract) (contractName, optContract string) {
+	optContract = "// SPDX-License-Identifier: " + contract.GetLicense() + "\n"
+	pragmas := contract.GetPragmas()
+	for _, pragma := range pragmas {
+		optContract += pragma.GetText() + "\n"
+	}
+	optContract += "\n"
+
+	body, _ := ast_printer.Print(contract.GetAST().GetContract())
+	optContract += body
+
+	return contract.GetName(), optContract
+}
+
+// func WriteContracts(outputPath, contractName string, optContracts []string) bool {
+// 	if outputPath == "" {
+// 		return false
+// 	}
+// 	contract := []byte(optContracts[])
+// 	os.WriteFile(contractName, ,0644)
+//
+// 	return true
+// }

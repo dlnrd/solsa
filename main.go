@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	filePath, _, ok := solsa.ParseFlags()
+	filePath, _, silent, ok := solsa.ParseFlags()
 	if !ok {
 		return
 	}
@@ -20,6 +20,6 @@ func main() {
 		return
 	}
 
-	solsa.OptimiseContracts(builder)
+	solsa.OptimiseContracts(builder, silent)
 
 }
