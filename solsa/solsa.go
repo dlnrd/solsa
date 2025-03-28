@@ -17,30 +17,23 @@ import (
 )
 
 func ParseFlags() (filePath, outputPath string, silent, ok bool) {
-	tmpFilePath := flag.String("i", "", "Path to File/Directory")
-	tmpOutputPath := flag.String("o", "", "Path to output directory")
+	flag.StringVar(&filePath, "i", "", "Path to File/Directory")
+	flag.StringVar(&outputPath, "o", "", "Path to output directory")
 	flag.BoolVar(&silent, "s", false, "Silent mode, no output to stdout")
 	flag.Parse()
-	// if *tmpSilent != "" {
-	// 	silent = true
-	// } else {
-	// 	silent = false
-	// }
 
-	if *tmpFilePath == "" {
+	if filePath == "" {
 		fmt.Println("Enter a path to file or directory (-i)")
 		return "", "", false, false // better than os.Exit(0) as runs deconstructors that close stuff
 	} else {
-		filePath, _ = fp.Abs(*tmpFilePath)
+		filePath, _ = fp.Abs(filePath)
 	}
-	if *tmpOutputPath == "" {
-		outputPath = ""
-	} else {
-		outputPath, _ = fp.Abs(*tmpOutputPath)
+	if outputPath != "" {
+		outputPath, _ = fp.Abs(outputPath)
 	}
 
-	if outputPath == "" { // don't want output
-		// don't do anything :)
+	if outputPath == "" {
+		// don't want output, don't do anything :)
 	} else if fileInfo, err := os.Stat(outputPath); err == nil { // file exists
 		if !fileInfo.IsDir() {
 			fmt.Println("Output file is a directory, please enter a filepath to save")
