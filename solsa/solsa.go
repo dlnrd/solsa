@@ -121,8 +121,9 @@ func SetupSolgoBuilder(sources *solgo.Sources) (builder *ir.Builder, ok bool) {
 	return builder, true
 }
 
-func OptimiseContracts(builder *ir.Builder, silent bool) {
+func OptimiseContracts(builder *ir.Builder, silent bool) (oState, rState, oStruct, rStruct, oCall, rCall, unopt, failed, totalContracts int) {
 	contracts := builder.GetRoot().GetContracts()
+	totalContracts = len(contracts)
 	for _, contract := range contracts {
 
 		stateVarOpt := opt.StateVariableOptimisable(contract)
@@ -141,26 +142,49 @@ func OptimiseContracts(builder *ir.Builder, silent bool) {
 			if !silent {
 				fmt.Println("-------------- NO OPTIMISATIONS FOUND --------------")
 			}
+			unopt++
 			continue
 		}
 
 		unoptContract, ok := ast_printer.Print(contract.GetAST().GetContract())
-		if !ok { // debug
-			printAllNodes(contract)
+		if unoptContract == "" {
+			unoptContract = "ERROR: ast_printer cannot print contract\n"
+			if !ok { // debug
+				// 	fmt.Println("\nContract: ", contract.GetName())
+				// 	printAllNodes(contract)
+			}
 		}
 
 		if stateVarOpt {
+			oState++
 			opt.OptimiseStateVariables(contract)
 		}
 		if structVarOpt {
+			oStruct++
 			opt.OptimiseStructVariables(contract)
 		}
 		if calldataOpt {
+			oCall++
 			opt.OptimiseCalldata(contract)
 
 		}
 
 		optContract, _ := ast_printer.Print(contract.GetAST().GetContract())
+		if optContract == "" {
+			optContract = "ERROR: ast_printer cannot print contract\n"
+			failed++
+		} else {
+			if stateVarOpt {
+				rState++
+			}
+			if structVarOpt {
+				rStruct++
+			}
+			if calldataOpt {
+				rCall++
+
+			}
+		}
 
 		if !silent {
 			fmt.Println("--------------- UNOPTIMISED CONTRACT ---------------")
@@ -174,22 +198,24 @@ func OptimiseContracts(builder *ir.Builder, silent bool) {
 
 	}
 
+	return oState, rState, oStruct, rStruct, oCall, rCall, unopt, failed, totalContracts
 }
 
 func printAllNodes(contract *ir.Contract) {
 	contractNodes := contract.GetAST().GetNodes()
 	for _, node := range contractNodes {
-		fmt.Println(node)
-		if node.GetNodes() != nil {
-			printAllNodesRecursive(node)
-		}
+		printAllNodesRecursive(node)
 	}
 }
 
 func printAllNodesRecursive(node ast.Node[ast.NodeType]) {
 	fmt.Println(node)
 	if node.GetNodes() != nil {
-		printAllNodesRecursive(node)
+		for _, childNode := range node.GetNodes() {
+			if childNode != nil {
+				printAllNodesRecursive(childNode)
+			}
+		}
 	}
 }
 
