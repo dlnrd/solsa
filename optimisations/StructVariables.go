@@ -1,7 +1,7 @@
 package optimisations
 
 import (
-	"fmt"
+	// "fmt"
 	"github.com/unpackdev/solgo/ast"
 	"github.com/unpackdev/solgo/ir"
 	"math"
@@ -74,15 +74,15 @@ func getSlotsUsedStruct(structVariables []*ast.Parameter) int64 {
 	return slotsUsed + 1
 }
 
-func PrintStructVariables(contract *ir.Contract) {
-	structs := contract.GetStructs()
-	for _, s := range structs {
-		members := s.GetAST().GetMembers()
-		for _, param := range members {
-			name := param.GetName()
-			vartype := param.GetTypeName().GetName()
-			size, exact := param.GetTypeName().StorageSize()
-			fmt.Println(name, vartype, size, exact)
-		}
-	}
-}
+// func PrintStructVariables(contract *ir.Contract) {
+// 	structs := contract.GetStructs()
+// 	for _, s := range structs {
+// 		members := s.GetAST().GetMembers()
+// 		for _, param := range members {
+// 			name := param.GetName()
+// 			vartype := param.GetTypeName().GetName()
+// 			size, exact := param.GetTypeName().StorageSize()
+// 			fmt.Println(name, vartype, size, exact)
+// 		}
+// 	}
+// }

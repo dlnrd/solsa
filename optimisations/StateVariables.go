@@ -1,7 +1,7 @@
 package optimisations
 
 import (
-	"fmt"
+	// "fmt"
 	"math"
 
 	"github.com/unpackdev/solgo/ast"
@@ -98,14 +98,14 @@ func getSlotsUsed(stateVariables []*ir.StateVariable) int64 {
 	return slotsUsed + 1
 }
 
-func PrintStateVariables(stateVariables []*ir.StateVariable) {
-	for _, v := range stateVariables {
-		name := v.GetName()
-		vartype := v.GetType()
-		storageSize, exact := v.GetStorageSize()
-		fmt.Println(name, vartype, storageSize, exact)
-	}
-}
+// func PrintStateVariables(stateVariables []*ir.StateVariable) {
+// 	for _, v := range stateVariables {
+// 		name := v.GetName()
+// 		vartype := v.GetType()
+// 		storageSize, exact := v.GetStorageSize()
+// 		fmt.Println(name, vartype, storageSize, exact)
+// 	}
+// }
 
 // func printAllNodes(node ast.Node[ast.NodeType]) {
 // 	nodes := node.GetNodes()
