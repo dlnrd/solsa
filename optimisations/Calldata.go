@@ -24,7 +24,9 @@ func OptimiseCalldata(contract *ir.Contract) bool {
 		if function.GetStateMutability() == ast_pb.Mutability_PURE {
 			for _, p := range params {
 				if p.GetStorageLocation() != ast_pb.StorageLocation_CALLDATA {
-					p.StorageLocation = ast_pb.StorageLocation_CALLDATA
+					if strings.Contains(p.GetTypeName().GetName(), "[]") {
+						p.StorageLocation = ast_pb.StorageLocation_CALLDATA
+					}
 				}
 			}
 			continue
@@ -33,6 +35,10 @@ func OptimiseCalldata(contract *ir.Contract) bool {
 		// check for params that need to be optimised
 		for _, p := range params {
 			if p.GetStorageLocation() != ast_pb.StorageLocation_MEMORY {
+				continue
+			}
+
+			if !strings.Contains(p.GetTypeName().GetName(), "[]") {
 				continue
 			}
 
@@ -57,7 +63,9 @@ func CalldataOptimisable(contract *ir.Contract) bool {
 		if function.GetStateMutability() == ast_pb.Mutability_PURE {
 			for _, p := range params {
 				if p.GetStorageLocation() != ast_pb.StorageLocation_CALLDATA {
-					return true
+					if strings.Contains(p.GetTypeName().GetName(), "[]") {
+						return true
+					}
 				}
 			}
 		}
@@ -65,6 +73,9 @@ func CalldataOptimisable(contract *ir.Contract) bool {
 		// check for params that need to be optimised
 		for _, p := range params {
 			if p.GetStorageLocation() != ast_pb.StorageLocation_MEMORY {
+				continue
+			}
+			if !strings.Contains(p.GetTypeName().GetName(), "[]") {
 				continue
 			}
 
