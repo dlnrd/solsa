@@ -30,7 +30,7 @@ func OptimiseStateVariables(contract *ir.Contract) bool {
 		}
 	}
 
-	// get parent nodes (ik it's a mess)
+	// get parent nodes (make this more readable)
 	parentNodes := newStateVariables[0].GetAST().GetTree().GetById(newStateVariables[0].GetSrc().GetParentIndex()).GetNodes()
 
 	tmpNodes := make([]ast.Node[ast.NodeType], len(parentNodes))
@@ -106,14 +106,3 @@ func PrintStateVariables(stateVariables []*ir.StateVariable) {
 		fmt.Println(name, vartype, storageSize, exact)
 	}
 }
-
-// func printAllNodes(node ast.Node[ast.NodeType]) {
-// 	nodes := node.GetNodes()
-// 	if nodes != nil {
-// 		for i, node := range nodes {
-// 			fmt.Println(i)
-// 			printAllNodes(node)
-// 		}
-// 	}
-// 	fmt.Println(node)
-// }

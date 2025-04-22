@@ -168,9 +168,6 @@ func OptimiseContracts(builder *ir.Builder, silent bool) {
 			fmt.Println("---------------- OPTIMISED CONTRACT ----------------")
 			fmt.Print(optContract)
 		}
-		// fmt.Println(ContractBuilder(contract))
-		// builder.Build()
-		// builder.GetSources().WriteToDir("/home/dlnrd/uni/fyp/testsol/tmp")
 
 	}
 
@@ -193,20 +190,20 @@ func printAllNodesRecursive(node ast.Node[ast.NodeType]) {
 	}
 }
 
-func ContractBuilder(contract *ir.Contract) (contractName, optContract string) {
-	optContract = "// SPDX-License-Identifier: " + contract.GetLicense() + "\n"
-	pragmas := contract.GetPragmas()
-	for _, pragma := range pragmas {
-		optContract += pragma.GetText() + "\n"
-	}
-	optContract += "\n"
-
-	body, _ := ast_printer.Print(contract.GetAST().GetContract())
-	optContract += body
-
-	return contract.GetName(), optContract
-}
-
+// func ContractBuilder(contract *ir.Contract) (contractName, optContract string) {
+// 	optContract = "// SPDX-License-Identifier: " + contract.GetLicense() + "\n"
+// 	pragmas := contract.GetPragmas()
+// 	for _, pragma := range pragmas {
+// 		optContract += pragma.GetText() + "\n"
+// 	}
+// 	optContract += "\n"
+//
+// 	body, _ := ast_printer.Print(contract.GetAST().GetContract())
+// 	optContract += body
+//
+// 	return contract.GetName(), optContract
+// }
+//
 // func WriteContracts(outputPath, contractName string, optContracts []string) bool {
 // 	if outputPath == "" {
 // 		return false

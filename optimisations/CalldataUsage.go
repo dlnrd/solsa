@@ -126,13 +126,3 @@ func getAssignmentNodesRecursive(node ast.Node[ast.NodeType]) []ast.Node[ast.Nod
 	}
 	return assignments
 }
-
-// func oldParameterGetsModified(param *ast.Parameter, function *ir.Function) bool {
-// 	regex := ";" + param.GetName() + "\\[.+\\]="
-// 	matched, err := regexp.MatchString(regex, function.GetAST().ToString())
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		os.Exit(0)
-// 	}
-// 	return matched
-// }

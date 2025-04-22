@@ -1,7 +1,7 @@
 package main
 
 import (
-	"solsa/solsa" // all the good stuff is here so it can be exported for tests :)
+	"solsa/solsa" // good stuff here for exporting to tests :)
 )
 
 func main() {
